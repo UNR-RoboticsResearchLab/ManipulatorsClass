@@ -63,7 +63,7 @@ def getColor(i):
 
 def getMarker(bot, index):
     marker = Marker()
-    marker.header.frame_id = "/my_frame"
+    marker.header.frame_id = "/base_link"
     marker.header.stamp = rospy.Time.now()
 
     ns = str(index)
@@ -74,7 +74,7 @@ def getMarker(bot, index):
     marker.action = Marker.ADD
 
 
-    posF = bot.getTranslation(0,index+1)/ 10.0
+    posF = bot.getTranslation(0,index+1)
     rotF = bot.getRotationMatrix(0,index+1)
 
     marker.pose.position.x = posF[0]
@@ -89,9 +89,9 @@ def getMarker(bot, index):
     marker.pose.orientation.w = quat[3]
 
     # scaling = bot.dhParams[index][2]/10.0
-    marker.scale.x = 0.05
-    marker.scale.y = 0.05
-    marker.scale.z = 0.05
+    marker.scale.x = 0.02
+    marker.scale.y = 0.02
+    marker.scale.z = 0.02
 
     rgb = getColor(index)
     marker.color.r = rgb[0]
@@ -105,7 +105,7 @@ def getMarker(bot, index):
 
 def getLineStrip(bot):
     marker = Marker()
-    marker.header.frame_id = "/my_frame"
+    marker.header.frame_id = "/base_link"
     marker.header.stamp = rospy.Time.now()
 
     marker.ns = "linestrip1"
@@ -113,7 +113,7 @@ def getLineStrip(bot):
 
     marker.type = Marker.LINE_STRIP
     marker.action = Marker.ADD
-    marker.scale.x = 0.05
+    marker.scale.x = 0.01
 
     rgb = [1.0,0.8,0]
     marker.color.r = rgb[0]
@@ -121,8 +121,11 @@ def getLineStrip(bot):
     marker.color.b = rgb[2]
     marker.color.a = 1.0
 
+    p = Point( 0, 0, 0)
+    marker.points.append(p)
+
     for index in xrange(bot.numLinks):
-        posF = bot.getTranslation(0,index+1)/ 10.0 # scale for drawing sanity.
+        posF = bot.getTranslation(0,index+1) # scale for drawing sanity.
         p = Point(*posF)
         marker.points.append(p)
 
