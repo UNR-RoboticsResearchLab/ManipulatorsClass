@@ -11,10 +11,7 @@ from visualization_msgs.msg import MarkerArray, Marker
 from geometry_msgs.msg import Point
 
 def talker():
-    dhDict = readRobotJson("robot_test.json")
-    bot = MyRobot(dhDict)
-
-    print( bot.numLinks )
+    bot = MyRobot("robot_test.json")
 
     markerPub = rospy.Publisher("visualization_marker", Marker, queue_size = 10)
     markerArrPub = rospy.Publisher("visualization_marker_array", MarkerArray, queue_size = 10)
@@ -135,7 +132,13 @@ def getLineStrip(bot):
 
 class MyRobot:
 
-    def __init__(self, DHparams):
+    def __init__(self, filename):
+        f = open(filename)
+        botSpecs = eval(f.read())
+        f.close()
+        self.parseDHFile(botSpecs)
+
+    def parseDHFile(self, DHparams):
         # list of 4-tuples (a, alpha, d, theta)
         if type(DHparams) == dict:
             self.setDHFromDict(DHparams)
@@ -180,11 +183,6 @@ class MyRobot:
         row4 = [       0.0,                    0.0,                    0.0,          1.0 ]
         return np.asarray([row1, row2, row3, row4])
 
-def readRobotJson(filename):
-    f = open(filename)
-    botSpecs = eval(f.read())
-    f.close()
-    return botSpecs
 
 if __name__ == '__main__':
     try:
