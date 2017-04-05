@@ -13,21 +13,26 @@ from geometry_msgs.msg import Point
 def talker():
     dhDict = readRobotJson("robot_test.json")
     bot = MyRobot(dhDict)
-    n = 300
-    dt = 1/30.0
-    Ve = [ [sin(2.0*pi*t), 0.15, 0, 0, 0, 0] for t in range(n)]
-    qDot = bot.getQdotFromVe(Ve, dt)
+    n = 10000
+    dt = 1/100.0
+    # circularPath
+    Ve = [ [5.0*sin(2.0*pi*t/1000.0) , 5.0*cos(2.0*pi*t/1000.0), 0.0, 0.0, 0.0, 0.0] for t in range(n)]
 
     # print( bot.numLinks )
 
     markerPub = rospy.Publisher("visualization_marker", Marker, queue_size = 10)
     markerArrPub = rospy.Publisher("visualization_marker_array", MarkerArray, queue_size = 10)
     rospy.init_node('basic_shapes')
-    rate = rospy.Rate(30)
+    rate = rospy.Rate(1000)
+    q = np.random.rand(7,1)/5.0
+    bot.q = q
+
     markerArr = MarkerArray()
     t = 0
     while not rospy.is_shutdown():
         #change q
+        qDot = bot.getQdotFromVe(Ve, dt)
+        print(np.round(Ve[t],3))
         bot.q = [ dt*qDot[t][i] + bot.q[i] for i in range(bot.numLinks) ]
         t = (t+1) % n
 
@@ -62,8 +67,6 @@ def getColor(i):
     colors[5] = (0.0, 0.4, 1.0)
     colors[6] = (0.0, 0.6, 1.0)
     colors[7] = (0.0, 0.8, 1.0)
-
-
     return colors[i]
 
 def getMarker(bot, index):
@@ -79,7 +82,7 @@ def getMarker(bot, index):
     marker.action = Marker.ADD
 
 
-    posF = bot.getTranslation(0,index+1)/ 10.0
+    posF = bot.getTranslation(0,index+1)
     rotF = bot.getRotationMatrix(0,index+1)
 
     marker.pose.position.x = posF[0]
@@ -127,7 +130,7 @@ def getLineStrip(bot):
     marker.color.a = 1.0
 
     for index in xrange(bot.numLinks):
-        posF = bot.getTranslation(0,index+1)/ 10.0 # scale for drawing sanity.
+        posF = bot.getTranslation(0,index+1) # scale for drawing sanity.
         p = Point(*posF)
         marker.points.append(p)
 
@@ -145,8 +148,6 @@ class MyRobot:
             self.dhParams = DHparams
         else:
             throw("Invalid Format")
-
-        # print self.dhParams
 
         self.numLinks = len(self.dhParams)
         self.q = np.zeros((self.numLinks, 1))
@@ -185,43 +186,56 @@ class MyRobot:
 
     #CH3.2 pg111-112
     def jacobian(self, ):
+        # This array starts with nothing, but Each Ji is appended to the end later on.
         J = np.ndarray([6,0]) # 6 for x,y,z,roll,pitch,yaw
+        
+        #position of the end effector in the global frame.
         pe = self.getTranslation(0, self.numLinks)
-        # z = np.asarray([0,0,1,0]) #z axis in local frame
+
+        #Loop over each joint i appending Jpi and Joi to J
         for i in range(self.numLinks):
-            #TODO change the zi to just pull the z column from 
+            #Was pulling zi by translating 
             # zi = np.matmul(self.getT(0, i), z)[:-1] # zi axis in global frame
-            zi = self.getT(0,i)[2:3,0:3]
+            zi = self.getT(0,i)[0:3,2]
             pi = self.getTranslation(0,i)
             dp = pe - pi
+
             # Assuming Revolute Joints
             Jpi = np.cross(zi, dp).reshape(3,-1)
             Joi = zi.reshape(3,-1)
             
-            Ji = np.vstack([Jpi, Joi]) # combine position and orientation portions
+            Ji = np.vstack([Jpi, Joi]) # combine Jpi and Joi into Ji
             J = np.hstack([J,Ji]) # concat Ji onto J
-        print(J)
+        # print(np.round(J, 3))
         return J
 
     #CH3.5 eq3.52
     def jacobInv(self, ):
         J = self.jacobian()
-        JJTInv = np.linalg.inv(np.matmul(J, J.T))
+        JJT = np.matmul(J, J.T)
+        try:
+            JJTInv = np.linalg.inv(JJT)
+        except:
+            # print("Using SVD Inv")
+            JJTInv = np.linalg.pinv(JJT)
+        print("Jinv")
+        print( np.round(np.matmul(J.T, JJTInv), 3))
         return np.matmul(J.T, JJTInv)
+
 
     #CH3.5 eq3.51
     def getQdotFromVe(self, Ve, dt):
         JInv = self.jacobInv()
         return [ np.matmul(JInv, p) for p in Ve ]
 
-    #CH3.5 eq3.48
-    def getQfromQdot(self, qDot, q0, dt):
-        q = [q0]
-        t = 0.0
-        for i in range(1, len(qDot)):
-            q.append( q[i-1] + (qDot[i-1]*dt) )
-            t += dt
-        return q
+    # #CH3.5 eq3.48 Not part of assignment
+    # def getQfromQdot(self, qDot, q0, dt):
+    #     q = [q0]
+    #     t = 0.0
+    #     for i in range(1, len(qDot)):
+    #         q.append( q[i-1] + (qDot[i-1]*dt) )
+    #         t += dt
+    #     return q
 
 def readRobotJson(filename):
     f = open(filename)
