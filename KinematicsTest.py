@@ -177,6 +177,8 @@ class MyRobot:
         row4 = [       0.0,                    0.0,                    0.0,          1.0 ]
         return np.asarray([row1, row2, row3, row4])
 
+
+
 def readRobotJson(filename):
     f = open(filename)
     botSpecs = eval(f.read())
