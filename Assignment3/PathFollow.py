@@ -14,9 +14,9 @@ def talker():
     dhDict = readRobotJson("robot_test.json")
     bot = MyRobot(dhDict)
     n = 10000
-    dt = 1/100.0
+    dt = 1/1000.0
     # circularPath
-    Ve = [ [5.0*sin(2.0*pi*t/1000.0) , 5.0*cos(2.0*pi*t/1000.0), 0.0, 0.0, 0.0, 0.0] for t in range(n)]
+    Ve = [ [sin(2.0*pi*t/10000.0) , cos(2.0*pi*t/10000.0), 0.0, 0.0, 0.0, 0.0] for t in range(n)]
 
     # print( bot.numLinks )
 
@@ -24,7 +24,7 @@ def talker():
     markerArrPub = rospy.Publisher("visualization_marker_array", MarkerArray, queue_size = 10)
     rospy.init_node('basic_shapes')
     rate = rospy.Rate(1000)
-    q = np.random.rand(7,1)/5.0
+    q = np.random.rand(7,1)
     bot.q = q
 
     markerArr = MarkerArray()
@@ -33,6 +33,7 @@ def talker():
         #change q
         qDot = bot.getQdotFromVe(Ve, dt)
         print(np.round(Ve[t],3))
+        print(np.round(qDot[t], 3))
         bot.q = [ dt*qDot[t][i] + bot.q[i] for i in range(bot.numLinks) ]
         t = (t+1) % n
 
